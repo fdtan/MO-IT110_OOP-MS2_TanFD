@@ -1,13 +1,17 @@
 package motorph.ui;
 
-import java.util.List;
+import java.io.IOException;
+import java.time.format.DateTimeFormatter;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
-import motorph.SalaryComputationModule;
+import motorph.model.Employee;
+import motorph.service.CSVDataHandler;
+import motorph.user.User;
 
 /**
  * Employee-facing lookup screen. Lets a logged-in "employee" user enter their
@@ -17,23 +21,29 @@ import motorph.SalaryComputationModule;
 public class EmployeeLookupFrame extends JFrame {
 
     private static final Logger logger = Logger.getLogger(EmployeeLookupFrame.class.getName());
-    private static final int MIN_COLUMNS_FOR_LOOKUP = 4; // need at least ID, LastName, FirstName, Birthday
+    private static final long serialVersionUID = 1L;
     private static final int FRAME_WIDTH = 500;
+    private static final DateTimeFormatter BIRTHDAY_FORMAT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
-    private transient List<String[]> employeeData;
+    private final transient User currentUser;
+    private final transient CSVDataHandler dataHandler = new CSVDataHandler();
 
     private JTextField employeeIdField;
     private JButton lookupButton;
     private JButton exitButton;
     private JLabel resultLabel;
 
-    public EmployeeLookupFrame() {
+    /**
+     * @param currentUser the logged-in user; must have VIEW_OWN_RECORD to look up
+     */
+    @SuppressWarnings("this-escape")
+    public EmployeeLookupFrame(User currentUser) {
+        this.currentUser = currentUser;
         initComponents();
         setResizable(false);
         setSize(FRAME_WIDTH, 350);
         setupLayout();
         setLocationRelativeTo(null);
-        loadEmployeeData();
     }
 
     /**
@@ -120,33 +130,36 @@ public class EmployeeLookupFrame extends JFrame {
         applySecondaryButtonStyle(exitButton);
     }
 
-    private void loadEmployeeData() {
-        employeeData = SalaryComputationModule.readCSV(SalaryComputationModule.EMPLOYEE_CSV_PATH);
-        if (employeeData == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Unable to load employee data. Please check that the file exists at: " + SalaryComputationModule.EMPLOYEE_CSV_PATH,
-                    "File Load Error",
-                    JOptionPane.ERROR_MESSAGE);
-            employeeData = new java.util.ArrayList<>();
-        }
-    }
-
     private void lookupButtonActionPerformed(java.awt.event.ActionEvent evt) {
+        if (!currentUser.hasPermission(User.VIEW_OWN_RECORD)) {
+            JOptionPane.showMessageDialog(this, "Your account is not allowed to do this.", "Access Denied", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         String id = employeeIdField.getText().trim();
         if (id.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter an employee number.", "Missing Input", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        String[] record = SalaryComputationModule.findEmployeeById(employeeData, id);
-        if (record == null || record.length < MIN_COLUMNS_FOR_LOOKUP) {
+        Employee employee;
+        try {
+            employee = dataHandler.findEmployeeById(id);
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Unable to load employee data", e);
+            JOptionPane.showMessageDialog(this,
+                    "Unable to load employee data. Please check that the file exists at: " + CSVDataHandler.DEFAULT_EMPLOYEE_CSV,
+                    "File Load Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (employee == null) {
             resultLabel.setText("<html>Employee number does not exist.</html>");
             return;
         }
 
-        String html = "<html>Employee Number: " + record[0]
-                + "<br>Employee Name: " + record[2] + " " + record[1]
-                + "<br>Birthday: " + record[3] + "</html>";
+        String html = "<html>Employee Number: " + employee.getEmployeeId()
+                + "<br>Employee Name: " + employee.getFullName()
+                + "<br>Birthday: " + employee.getBirthday().format(BIRTHDAY_FORMAT) + "</html>";
         resultLabel.setText(html);
     }
 
@@ -180,9 +193,5 @@ public class EmployeeLookupFrame extends JFrame {
      */
     private void applyFieldStyle(javax.swing.JTextField field) {
         UIStyleHelper.applyFieldStyle(field);
-    }
-
-    public static void main(String[] args) {
-        java.awt.EventQueue.invokeLater(() -> new EmployeeLookupFrame().setVisible(true));
     }
 }

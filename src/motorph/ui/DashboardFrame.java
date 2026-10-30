@@ -4,19 +4,25 @@
  */
 package motorph.ui;
 
-import java.util.logging.Logger;
+import motorph.user.User;
 
 /**
- * Admin dashboard frame
+ * Payroll staff dashboard frame
  */
 public class DashboardFrame extends javax.swing.JFrame {
-    private static final Logger logger = Logger.getLogger(DashboardFrame.class.getName());
+    private static final long serialVersionUID = 1L;
     private static final int FRAME_WIDTH = 600;
 
+    private final transient User currentUser;
+
     /**
-     * Creates new form DashboardFrame
+     * Creates the dashboard for the logged-in user.
+     *
+     * @param currentUser the logged-in user; passed on to the next screens
      */
-    public DashboardFrame() {
+    @SuppressWarnings("this-escape")
+    public DashboardFrame(User currentUser) {
+        this.currentUser = currentUser;
         initComponents();
         setSize(FRAME_WIDTH, 500);
         setupLayout();
@@ -37,7 +43,7 @@ public class DashboardFrame extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         motorphLabel.setText("MotorPH");
-        welcomeLabel.setText("Welcome, Admin!");
+        welcomeLabel.setText("Welcome, " + currentUser.getRole() + "!");
 
         employeeButton.setText("Employees");
         employeeButton.setMnemonic('E');
@@ -110,13 +116,30 @@ public class DashboardFrame extends javax.swing.JFrame {
         this.dispose();
     }
 
+    /**
+     * Shows an "access denied" message when the user's role lacks the action.
+     *
+     * @return true if the user may perform the action
+     */
+    private boolean checkPermission(String action) {
+        if (currentUser.hasPermission(action)) {
+            return true;
+        }
+        javax.swing.JOptionPane.showMessageDialog(this, "Your account is not allowed to do this.", "Access Denied", javax.swing.JOptionPane.WARNING_MESSAGE);
+        return false;
+    }
+
     // EVENT HANDLERS
     private void employeeButtonActionPerformed(java.awt.event.ActionEvent evt) {
-        openFrame(new EmployeeFrame());
+        if (checkPermission(User.VIEW_EMPLOYEES)) {
+            openFrame(new EmployeeFrame(currentUser));
+        }
     }
 
     private void payrollButtonActionPerformed(java.awt.event.ActionEvent evt) {
-        showProcessPayrollMenu();
+        if (checkPermission(User.COMPUTE_PAYROLL)) {
+            showProcessPayrollMenu();
+        }
     }
 
     /**
@@ -135,9 +158,9 @@ public class DashboardFrame extends javax.swing.JFrame {
                 options[0]);
 
         if (choice == 0) {
-            openFrame(new SalaryComputationFrame(true));
+            openFrame(new SalaryComputationFrame(currentUser, true));
         } else if (choice == 1) {
-            openFrame(new SalaryComputationFrame(false));
+            openFrame(new SalaryComputationFrame(currentUser, false));
         } else {
             // Dialog was cancelled/closed: force the frame to repaint so the
             // header and logout button redraw cleanly.
@@ -171,34 +194,6 @@ public class DashboardFrame extends javax.swing.JFrame {
      */
     private void applySecondaryButtonStyle(javax.swing.JButton button) {
         UIStyleHelper.applySecondaryButtonStyle(button);
-    }
-
-    /**
-     * Applies standard styling to a text input field (JTextField or subclasses).
-     *
-     * @param field the JTextField to style
-     */
-    private void applyFieldStyle(javax.swing.JTextField field) {
-        UIStyleHelper.applyFieldStyle(field);
-    }
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
-        }
-
-        java.awt.EventQueue.invokeLater(() -> new DashboardFrame().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

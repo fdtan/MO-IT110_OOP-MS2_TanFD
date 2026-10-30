@@ -4,21 +4,32 @@
     */
     package motorph.ui;
 
+    import java.util.List;
     import java.util.logging.Logger;
+    import motorph.user.EmployeeUser;
+    import motorph.user.PayrollStaff;
+    import motorph.user.User;
 
     /**
      * Login screen for MotorPH Employee App.
+     * Each account is a User object; the next screen is chosen by the user's
+     * permissions (polymorphic hasPermission), not by checking the username.
      */
     public class LoginFrame extends javax.swing.JFrame {
         private static final Logger logger = Logger.getLogger(LoginFrame.class.getName());
-        private static final String USERNAME_EMPLOYEE     = "employee";
-        private static final String USERNAME_PAYROLL_STAFF = "payroll_staff";
-        private static final String VALID_PASSWORD         = "12345";
+        private static final long serialVersionUID = 1L;
         private static final int FRAME_WIDTH = 500;
+
+        // System accounts. Credentials are private fields inside each User object.
+        private static final List<User> ACCOUNTS = List.of(
+            new EmployeeUser("employee", "motorph123"),
+            new PayrollStaff("payroll_staff", "motorph123")
+        );
 
         /**
          * Creates new form LoginFrame
          */
+        @SuppressWarnings("this-escape")
         public LoginFrame() {
             initComponents();
             setSize(FRAME_WIDTH, 400);
@@ -147,15 +158,19 @@
 
         //NAVIGATION
         /**
-         * Opens the correct next screen based on which valid username logged in.
+         * Opens the screen the logged-in user is allowed to use. The User subclass
+         * (EmployeeUser or PayrollStaff) answers hasPermission().
          *
-         * @param inputUsername the username that was just validated
+         * @param user the user who just logged in
          */
-        private void openRoleBasedScreen(String inputUsername){
-            if (USERNAME_EMPLOYEE.equals(inputUsername)) {
-                new EmployeeLookupFrame().setVisible(true);
+        private void openRoleBasedScreen(User user){
+            if (user.hasPermission(User.VIEW_EMPLOYEES)) {
+                new DashboardFrame(user).setVisible(true);
+            } else if (user.hasPermission(User.VIEW_OWN_RECORD)) {
+                new EmployeeLookupFrame(user).setVisible(true);
             } else {
-                new DashboardFrame().setVisible(true);
+                javax.swing.JOptionPane.showMessageDialog(this, "This account has no screens it can open.", "Access Denied", javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
             }
             this.dispose();
         }
@@ -178,19 +193,25 @@
                 return;
             }
 
-            if(validateLogin(inputUsername, inputPassword)){
-                openRoleBasedScreen(inputUsername);
+            User user = findAuthenticatedUser(inputUsername, inputPassword);
+            if(user != null){
+                openRoleBasedScreen(user);
             }
             else{
                 javax.swing.JOptionPane.showMessageDialog(this, "Invalid Username or Password", "Login Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
                 passwordField.setText("");
             }
         }
-    
+
         //VALIDATION
-        private boolean validateLogin(String inputUsername, String inputPassword){
-            boolean validUsername = USERNAME_EMPLOYEE.equals(inputUsername) || USERNAME_PAYROLL_STAFF.equals(inputUsername);
-            return validUsername && VALID_PASSWORD.equals(inputPassword);
+        /** Returns the account whose authenticate() accepts these credentials, or null. */
+        private User findAuthenticatedUser(String inputUsername, String inputPassword){
+            for (User account : ACCOUNTS) {
+                if (account.authenticate(inputUsername, inputPassword)) {
+                    return account;
+                }
+            }
+            return null;
         }
 
         /**
