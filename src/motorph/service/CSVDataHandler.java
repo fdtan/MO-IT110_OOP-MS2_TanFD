@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import motorph.model.AttendanceRecord;
 import motorph.model.Employee;
+import motorph.model.Payslip;
 import motorph.model.ProbationaryEmployee;
 import motorph.model.RegularEmployee;
 
@@ -258,6 +259,34 @@ public class CSVDataHandler {
             }
         }
         return attendance;
+    }
+
+    // === PAYROLL RESULTS ===
+
+    /**
+     * Writes payslips to payroll_results.csv, replacing its contents. Columns:
+     * Employee ID, Name, Hourly Rate, Hours Worked, Gross Pay, each deduction
+     * (SSS, PhilHealth, Pag-IBIG, Withholding Tax), Total Deductions, Net Pay.
+     *
+     * @throws IllegalArgumentException if the list is empty
+     * @throws IOException if the file cannot be written
+     */
+    public void savePayrollResults(List<Payslip> payslips) throws IOException {
+        if (payslips == null || payslips.isEmpty()) {
+            throw new IllegalArgumentException("There are no payroll results to save.");
+        }
+        List<String> header = new ArrayList<>(List.of("Employee ID", "Name", "Hourly Rate", "Hours Worked", "Gross Pay"));
+        header.addAll(payslips.get(0).getDeductionBreakdown().keySet());
+        header.addAll(List.of("Total Deductions", "Net Pay"));
+
+        try (BufferedWriter writer = Files.newBufferedWriter(resultsFile, StandardCharsets.UTF_8)) {
+            writer.write(joinCsvRow(header.toArray(new String[0])));
+            writer.newLine();
+            for (Payslip payslip : payslips) {
+                writer.write(payslip.toCSVRow());
+                writer.newLine();
+            }
+        }
     }
 
     // === CSV HELPERS ===
