@@ -6,8 +6,7 @@ package motorph;
 import motorph.ui.LoginFrame;
 
 /**
- *
- * @author hady
+ * Entry point of the MotorPH payroll system. Opens the login screen.
  */
 public class MotorPH {
 
