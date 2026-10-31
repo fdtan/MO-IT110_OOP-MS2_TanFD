@@ -43,7 +43,6 @@
          * perform layout, set bounds, or apply styling. Those responsibilities are
          * handled in setupLayout().
          */
-        @SuppressWarnings("unchecked")
         private void initComponents() {
             motorph = new javax.swing.JLabel();
             password = new javax.swing.JLabel();

@@ -62,7 +62,6 @@ public class EmployeeFrame extends javax.swing.JFrame {
     /**
      * Initializes component instances and registers listeners only. No bounds or layout.
      */
-    @SuppressWarnings("unchecked")
     private void initComponents() {
 
         employeeLabel = new javax.swing.JLabel();
